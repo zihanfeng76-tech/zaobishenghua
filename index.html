@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>藻笔生花 - 敦煌纹样绘制</title>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+ <style>
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+ body {
+ margin: 0;
+ padding: 0;
+ overflow: hidden;
+ background-color: #000;
+ font-family: 'Microsoft YaHei', 'SimSun', serif;
+ }
+
+ canvas { display: block; }
+
+ /* 主面板 */
+ #ui-panel {
+ position: absolute;
+ left: 10px;
+ top: 10px;
+ background: rgba(20, 15, 10, 0.95);
+ border: 2px solid rgba(212, 175, 55, 0.4);
+ backdrop-filter: blur(10px);
+ border-radius: 12px;
+ color: #e8dcc8;
+ padding: 12px 14px;
+ z-index: 10;
+ max-width: 420px;
+ max-height: 94vh;
+ overflow-y: auto;
+ user-select: none;
+ box-shadow: 0 4px 25px rgba(0,0,0,0.6);
+ }
+
+ #ui-panel h3 {
+ margin: 8px 0 12px;
+ font-size: 16px;
+ color: #d4af37;
+ text-align: center;
+ border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+ padding-bottom: 8px;
+ }
+
+ .ui-row {
+ display: grid;
+ grid-template-columns: 90px 1fr;
+ gap: 10px;
+ align-items: center;
+ margin: 8px 0;
+ }
+
+ .ui-label {
+ font-size: 12px;
+ color: #b8a88a;
+ }
+
+ .ui-control { width: 100%; }
+
+ /* 知识面板 */
+ #knowledge-panel {
+ position: absolute;
+ right: 15px;
+ top: 15px;
+ width: 300px;
+ background: rgba(20, 15, 10, 0.92);
+ border: 2px solid rgba(212, 175, 55, 0.4);
+ border-radius: 12px;
+ padding: 15px;
+ color: #e8dcc8;
+ z-index: 20;
+ max-height: 85vh;
+ overflow-y: auto;
+ box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+ transition: all 0.3s ease;
+ }
+
+ #knowledge-panel.hidden {
+ transform: translateX(120%);
+ opacity: 0;
+ }
+
+ #knowledge-panel h4 {
+ color: #d4af37;
+ font-size: 14px;
+ margin-bottom: 10px;
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+ padding-bottom: 8px;
+ }
+
+ .knowledge-section {
+ background: rgba(139, 90, 43, 0.15);
+ border-radius: 8px;
+ padding: 12px;
+ margin: 10px 0;
+ border-left: 3px solid rgba(212, 175, 55, 0.5);
+ }
+
+ .knowledge-section h5 {
+ color: #d4af37;
+ font-size: 12px;
+ margin: 0 0 8px 0;
+ }
+
+ .knowledge-section p {
+ font-size: 11px;
+ line-height: 1.7;
+ color: #d0c0a0;
+ margin: 5px 0;
+ }
+
+ .knowledge-section .tag {
+ display: inline-block;
+ background: rgba(212, 175, 55, 0.2);
+ color: #d4af37;
+ padding: 2px 8px;
+ border-radius: 12px;
+ font-size: 10px;
+ margin: 3px 3px 0 0;
+ }
+
+ /* 小知识弹窗 */
+ #tip-popup {
+ position: absolute;
+ left: 50%;
+ bottom: 30px;
+ transform: translateX(-50%);
+ background: rgba(20, 15, 10, 0.95);
+ border: 2px solid rgba(212, 175, 55, 0.5);
+ border-radius: 10px;
+ padding: 15px 20px;
+ color: #e8dcc8;
+ max-width: 500px;
+ z-index: 30;
+ opacity: 0;
+ transition: opacity 0.5s ease;
+ pointer-events: none;
+ }
+
+ #tip-popup.show {
+ opacity: 1;
+ }
+
+ #tip-popup h5 {
+ color: #d4af37;
+ margin: 0 0 8px 0;
+ font-size: 13px;
+ }
+
+ #tip-popup p {
+ font-size: 12px;
+ line-height: 1.6;
+ margin: 0;
+ }
+
+ /* 纹样图鉴 - 笔刷选择 */
+ .pattern-gallery {
+ display: grid;
+ grid-template-columns: repeat(4, 1fr);
+ gap: 8px;
+ margin: 10px 0;
+ }
+
+ .pattern-item {
+ aspect-ratio: 1;
+ background: rgba(60, 55, 50, 0.6);
+ border: 2px solid rgba(212, 175, 55, 0.25);
+ border-radius: 8px;
+ cursor: pointer;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+ font-size: 10px;
+ padding: 5px;
+ transition: all 0.2s;
+ color: #c0b0a0;
+ }
+
+ .pattern-item:hover {
+ background: rgba(100, 85, 70, 0.7);
+ border-color: #d4af37;
+ transform: scale(1.05);
+ }
+
+ .pattern-item svg {
+ width: 28px;
+ height: 28px;
+ margin-bottom: 4px;
+ stroke: #d4af37;
+ }
+
+ .pattern-item.selected {
+ background: rgba(212, 175, 55, 0.3);
+ border-color: #d4af37;
+ color: #d4af37;
+ box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+ }
+
+ /* 色块 */
+ .swatches-container {
+ display: grid;
+ grid-template-columns: repeat(6, 22px);
+ gap: 8px;
+ margin: 10px 0;
+ justify-content: center;
+ }
+
+ .swatch {
+ width: 22px;
+ height: 22px;
+ border-radius: 4px;
+ border: 2px solid rgba(255, 255, 255, 0.2);
+ cursor: pointer;
+ transition: all 0.2s;
+ }
+
+ .swatch:hover {
+ transform: scale(1.3);
+ border-color: #d4af37;
+ box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+ }
+
+ .swatch.active {
+ border-color: #d4af37;
+ box-shadow: 0 0 10px rgba(212, 175, 55, 0.7);
+ }
+
+ /* 按钮 */
+ .buttons-row {
+ display: grid;
+ grid-template-columns: 1fr 1fr 1fr;
+ gap: 8px;
+ margin: 12px 0;
+ }
+
+ button {
+ padding: 8px;
+ cursor: pointer;
+ background: linear-gradient(135deg, rgba(139, 90, 43, 0.8), rgba(100, 60, 30, 0.8));
+ color: #e8dcc8;
+ border: 1px solid rgba(212, 175, 55, 0.4);
+ border-radius: 6px;
+ transition: all 0.3s;
+ font-size: 11px;
+ }
+
+ button:hover {
+ background: linear-gradient(135deg, rgba(180, 120, 60, 0.9), rgba(139, 90, 43, 0.9));
+ border-color: #d4af37;
+ transform: translateY(-1px);
+ }
+
+ select, input[type="range"] {
+ background: rgba(40, 35, 30, 0.9);
+ color: #e8dcc8;
+ border: 1px solid rgba(212, 175, 55, 0.3);
+ border-radius: 4px;
+ padding: 5px;
+ }
+
+ input[type="checkbox"] {
+ margin: 0;
+ accent-color: #d4af37;
+ }
+
+ /* 滑块样式 - 黄色主题 */
+ input[type="range"] {
+ -webkit-appearance: none;
+ appearance: none;
+ height: 6px;
+ background: rgba(60, 55, 50, 0.8);
+ border-radius: 3px;
+ outline: none;
+ }
+
+ input[type="range"]::-webkit-slider-thumb {
+ -webkit-appearance: none;
+ appearance: none;
+ width: 16px;
+ height: 16px;
+ background: #d4af37;
+ border-radius: 50%;
+ cursor: pointer;
+ border: 2px solid rgba(20, 15, 10, 0.8);
+ box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+ }
+
+ input[type="range"]::-webkit-slider-thumb:hover {
+ background: #e8c547;
+ box-shadow: 0 0 12px rgba(212, 175, 55, 0.8);
+ }
+
+ input[type="range"]::-moz-range-thumb {
+ width: 16px;
+ height: 16px;
+ background: #d4af37;
+ border-radius: 50%;
+ cursor: pointer;
+ border: 2px solid rgba(20, 15, 10, 0.8);
+ box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+ }
+
+ input[type="range"]::-moz-range-thumb:hover {
+ background: #e8c547;
+ box-shadow: 0 0 12px rgba(212, 175, 55, 0.8);
+ }
+
+ input[type="range"]::-webkit-slider-runnable-track {
+ height: 6px;
+ background: rgba(100, 85, 70, 0.6);
+ border-radius: 3px;
+ }
+
+ input[type="range"]::-moz-range-track {
+ height: 6px;
+ background: rgba(100, 85, 70, 0.6);
+ border-radius: 3px;
+ }
+
+ /* 知识面板开关 */
+ .toggle-btn {
+ position: absolute;
+ right: 15px;
+ top: 15px;
+ background: rgba(212, 175, 55, 0.9);
+ color: #1a1510;
+ border: none;
+ border-radius: 50%;
+ width: 40px;
+ height: 40px;
+ cursor: pointer;
+ font-size: 18px;
+ z-index: 25;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+ transition: all 0.3s;
+ }
+
+ .toggle-btn:hover {
+ transform: scale(1.1);
+ background: #d4af37;
+ }
+
+ /* 滚动条 */
+ ::-webkit-scrollbar {
+ width: 6px;
+ }
+
+ ::-webkit-scrollbar-track {
+ background: rgba(40, 35, 30, 0.5);
+ border-radius: 3px;
+ }
+
+ ::-webkit-scrollbar-thumb {
+ background: rgba(139, 90, 43, 0.6);
+ border-radius: 3px;
+ }
+
+ ::-webkit-scrollbar-thumb:hover {
+ background: rgba(180, 140, 80, 0.7);
+ }
+
+ @media (max-width: 768px) {
+ #ui-panel {
+ max-width: 92%;
+ font-size: 11px;
+ }
+
+ .ui-row {
+ grid-template-columns: 80px 1fr;
+ }
+
+ #knowledge-panel {
+ width: 260px;
+ right: 10px;
+ top: 60px;
+ }
+ }
+ </style>
+</head>
+<body>
+ <!-- 知识面板开关 -->
+ <button class="toggle-btn" onclick="toggleKnowledgePanel()" title="敦煌知识面板">知</button>
+
+ <!-- 知识面板 -->
+ <div id="knowledge-panel">
+ <h4>敦煌知识面板</h4>
+ 
+ <!-- 配色知识 -->
+ <div class="knowledge-section" id="palette-knowledge">
+ <h5>当前配色</h5>
+ <p id="paletteInfo">选择配色方案查看详情</p>
+ </div>
+
+ <!-- 纹样知识 -->
+ <div class="knowledge-section" id="pattern-knowledge">
+ <h5>当前纹样</h5>
+ <p id="patternInfo">点击左侧纹样选择笔刷</p>
+ </div>
+
+ <!-- 绘制统计 -->
+ <div class="knowledge-section">
+ <h5>绘制统计</h5>
+ <p>笔触数：<span id="stroke-count">0</span></p>
+ <p>绘制时长：<span id="draw-time">0</span> 分钟</p>
+ </div>
+
+ <!-- 随机小知识 -->
+ <div class="knowledge-section" id="random-tip">
+ <h5>敦煌小知识</h5>
+ <p id="tip-content">开始绘制，了解敦煌文化...</p>
+ <button onclick="showRandomTip()" style="margin-top:8px;font-size:10px;padding:4px 8px;">换一条</button>
+ </div>
+ </div>
+
+ <!-- 小知识弹窗 -->
+ <div id="tip-popup">
+ <h5>敦煌小知识</h5>
+ <p id="popup-tip-content">点击继续绘制...</p>
+ </div>
+
+ <!-- 主控制面板 -->
+ <div id="ui-panel">
+ <h3>藻笔生花</h3>
+
+ <div class="ui-row">
+ <span class="ui-label">配色方案</span>
+ <select id="scheme" class="ui-control"></select>
+ </div>
+
+ <div style="margin: 12px 0 8px; color: #d4af37; font-size: 13px; text-align: center;">
+ 点击纹样选择笔刷
+ </div>
+
+ <!-- 纹样图鉴 - 直接作为笔刷选择 -->
+ <div class="pattern-gallery" id="patternGrid"></div>
+
+ <div class="ui-row">
+ <span class="ui-label">对称数</span>
+ <input type="range" id="symmetry" class="ui-control" min="4" max="36" value="16">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">笔刷大小</span>
+ <input type="range" id="brushSize" class="ui-control" min="4" max="140" value="42">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">线宽</span>
+ <input type="range" id="lineWidth" class="ui-control" min="1" max="14" value="2">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">柔和抖动</span>
+ <input type="range" id="jitter" class="ui-control" min="0" max="12" step="0.5" value="0.8">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">随机配色</span>
+ <input type="checkbox" id="randomColor">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">填充图形</span>
+ <input type="checkbox" id="fillEnabled">
+ </div>
+
+ <div class="ui-row">
+ <span class="ui-label">知识提示</span>
+ <input type="checkbox" id="tipEnabled" checked>
+ </div>
+
+ <div class="ui-label" style="margin: 8px 0 6px; text-align: center; color: #d4af37;">点击色块选择颜色</div>
+ <div class="swatches-container" id="swatches"></div>
+
+ <div class="buttons-row">
+ <button id="clearBtn">清屏</button>
+ <button id="saveBtn">保存</button>
+ <button id="shuffleBtn">随机</button>
+ </div>
+ </div>
+
+ <script>
+ // ========== 敦煌纹样数据库（笔刷）==========
+ const DUNHUANG_PATTERNS = [
+ {
+ id: 'lotus',
+ name: '莲花纹',
+ meaning: '佛教圣洁象征，出淤泥而不染',
+ usage: '藻井中心、佛座装饰、边饰',
+ period: '北朝至隋唐',
+ evolution: '从印度传入，与中国荷花融合，形成敦煌独特的莲花样式',
+ tags: ['佛教', '圣洁', '融合'],
+ svg: `<svg viewBox="-102 -102 204 204" fill="none" stroke="currentColor" stroke-width="7.875"><g><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(0)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(45)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(90)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(135)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(180)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(225)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(270)"/><path d="M0,0 Q18,-40.5 45,-56.25 Q36,-22.5 27,0 Z" transform="rotate(315)"/><circle cx="0" cy="0" r="15.75" fill="currentColor" stroke="none"/></g></svg>`
+ },
+ {
+ id: 'scroll',
+ name: '卷草纹',
+ meaning: '生生不息，连绵不断',
+ usage: '边饰、龛楣、壁画分隔带',
+ period: '各时期均有',
+ evolution: '中国传统纹样，与佛教装饰结合，形成流畅的卷草样式',
+ tags: ['传统', '边饰', '流畅'],
+ svg: `<svg viewBox="-40 -30 80 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M-35 15C-28 22 -14 26 0 22C14 17 21 7 21 -2C21 -12 14 -16 7 -14C0 -12 -2 -6 2 -2C7 0 12 -2 12 -7"/></svg>`
+ },
+ {
+ id: 'ribbon',
+ name: '飞天飘带',
+ meaning: '灵动飘逸，超脱凡尘',
+ usage: '飞天形象、舞蹈姿态',
+ period: '盛唐最盛',
+ evolution: '源自印度天女服饰，经西域传入，唐代形成飘逸风格',
+ tags: ['飞天', '飘逸', '唐代'],
+ svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6C6 6 8 10 12 10C16 10 18 6 22 6"/><path d="M2 14C6 14 8 18 12 18C16 18 18 14 22 14"/></svg>`
+ },
+ {
+ id: 'cloud',
+ name: '祥云纹',
+ meaning: '吉祥如意，高升腾达',
+ usage: '背景装饰、佛国天界',
+ period: '隋唐时期',
+ evolution: '源自先秦云雷纹，汉代发展，唐代形成如意云纹',
+ tags: ['吉祥', '云雷纹', '如意'],
+ svg: `<svg viewBox="-30 -30 60 60" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M-6,-14 C-16,-16 -24,-8 -22,3 C-19,11 -11,11 -8,6 C-5,0 -11,-3 -14,0"/><path d="M6,-14 C16,-16 24,-8 22,3 C19,11 11,11 8,6 C5,0 11,-3 14,0"/><path d="M-6,-14 C-3,-19 3,-19 6,-14"/><path d="M-8,6 C-4,11 4,11 8,6"/></svg>`
+ },
+ {
+ id: 'diamond',
+ name: '菱格纹',
+ meaning: '坚固不坏，永恒不变',
+ usage: '平棋顶、边饰',
+ period: '北魏至西魏',
+ evolution: '几何纹样的经典，象征佛教法身的坚固',
+ tags: ['几何', '坚固', '法身'],
+ svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L22 12L12 22L2 12Z"/><path d="M12 6L18 12L12 18L6 12Z"/></svg>`
+ },
+ {
+ id: 'honeysuckle',
+ name: '忍冬纹',
+ meaning: '坚韧不拔，冬夏常青',
+ usage: '边饰、柱头装饰',
+ period: '北朝至隋',
+ evolution: '地中海地区传入，与卷草纹融合，形成独特样式',
+ tags: ['地中海', '坚韧', '融合'],
+ svg: `<svg viewBox="-30 -30 60 60" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 25 Q-8 20 -15 15 Q-22 10 -25 5 Q-28 0 -25 -5 Q-22 -10 -15 -8 Q-8 -5 -4 5 Q0 15 0 25"/><path d="M0 25 Q8 20 15 15 Q22 10 25 5 Q28 0 25 -5 Q22 -10 15 -8 Q8 -5 4 5 Q0 15 0 25"/><path d="M0 25 Q-2 15 -2 5 Q-2 -5 0 -15 Q2 -20 5 -20 Q8 -20 8 -15 Q8 -5 5 5 Q2 15 0 25"/></svg>`
+ },
+ {
+ id: 'paisley',
+ name: '莲瓣纹',
+ meaning: '清净无染，佛性圆满',
+ usage: '佛座、柱头、边饰',
+ period: '北朝至隋唐',
+ evolution: '佛教核心纹样，从印度风格逐渐中国化',
+ tags: ['佛教核心', '清净', '中国化'],
+ svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 4 6 4 12C4 18 8 22 12 22C16 22 20 18 20 12C20 6 16 2 12 2Z"/><path d="M12 6C10 6 8 8 8 12C8 16 10 18 12 18C14 18 16 16 16 12C16 8 14 6 12 6Z"/></svg>`
+ },
+ {
+ id: 'meander',
+ name: '回纹',
+ meaning: '富贵不断，子孙绵延',
+ usage: '边框、地纹',
+ period: '各时期',
+ evolution: '新石器时代陶器纹样，中国最古老的装饰纹样之一',
+ tags: ['古老', '传统', '富贵'],
+ svg: `<svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="4"><path d="M5 55H15V5H55V45H25V25H45V35H35"/></svg>`
+ }
+ ];
+
+ // 配色方案
+ const PALETTES = [
+ {
+ name: '初唐华彩 · 莫高窟329窟',
+ bg: '#000000',
+ colors: ['#f5e4ce', '#d18e50', '#8aaeb2', '#c0502e', '#4f322d'],
+ era: '初唐时期（公元618-712年）',
+ description: '329窟莲花飞天藻井是初唐艺术的巅峰之作，展现大唐初年的恢弘气象',
+ symbolism: '暖金象征佛光普照，石青寓意天宇浩瀚，赭红代表大地厚重，展现初唐的富丽堂皇',
+ history: '329窟建于初唐时期，窟顶莲花飞天藻井是敦煌藻井图案的经典代表，中心莲花四周环绕四身飞天，姿态优美，色彩富丽，被誉为"最美藻井"之一。'
+ },
+ {
+ name: '青绿山水 · 莫高窟103窟',
+ bg: '#000000',
+ colors: ['#68CDC8', '#75B79B', '#9CCAAE', '#CCC6AE', '#E7E8EC', '#C26E30', '#74240D'],
+ era: '中唐时期（公元781-848年）',
+ description: '青绿山水画的巅峰，展现东方美学的空灵意境',
+ symbolism: '石青、石绿为主色调，象征山川灵秀、天地和谐',
+ history: '103窟的维摩诘经变是敦煌壁画中的杰作，维摩诘的形象被誉为"画中有诗"。'
+ },
+ {
+ name: '净土庄严 · 莫高窟427窟',
+ bg: '#000000',
+ colors: ['#C4896B', '#AC8E96', '#729194', '#727483', '#EDDEDC', '#CAA696', '#975D49'],
+ era: '隋代（公元581-618年）',
+ description: '净土宗壁画风格，色调温润典雅',
+ symbolism: '暖色调营造庄严祥和的佛国净土氛围',
+ history: '隋代是敦煌艺术的重要转型期，在继承北朝传统的基础上，吸收了中原和西域的艺术元素。'
+ },
+ {
+ name: '飞天霓裳 · 莫高窟285窟',
+ bg: '#000000',
+ colors: ['#5D85C5', '#BEE3CC', '#FCDC80', '#E67553', '#AD4E3D', '#F4E5CD'],
+ era: '北魏至西魏（公元386-556年）',
+ description: '飞天服饰的经典配色，飘逸灵动',
+ symbolism: '淡雅中见华丽，体现飞天的轻盈与神圣',
+ history: '285窟是敦煌最早有确切纪年的洞窟（西魏大统四年），是研究飞天演变的重要资料。'
+ }
+ ];
+
+ // 随机小知识
+ const RANDOM_TIPS = [
+ { title: '莫高窟的创建', content: '相传前秦时期，僧人乐僔路经鸣沙山，忽见金光闪耀，如现万佛，于是开凿了第一个洞窟。' },
+ { title: '敦煌的色彩秘密', content: '敦煌壁画历经千年不褪色，秘密在于使用了天然矿物颜料：石青来自蓝铜矿，石绿来自孔雀石，朱砂来自辰砂。' },
+ { title: '飞天的演变', content: '早期的飞天受印度影响，体态丰腴；北魏时期变得清瘦；唐代达到巅峰，体态丰满、飘带飞扬。' },
+ { title: '敦煌的守护者', content: '1944年，常书鸿先生在敦煌建立了国立敦煌艺术研究所，被誉为"敦煌守护神"。' },
+ { title: '丝绸之路的明珠', content: '敦煌位于丝绸之路的咽喉要道，是东西方文化交流的枢纽，印度佛教、希腊艺术、波斯文化在此交融。' },
+ { title: '壁画的绘制工艺', content: '敦煌壁画的制作有严格的工序：先处理崖壁，再涂抹泥层，然后刷白粉，最后用矿物颜料绘制。' },
+ { title: '藻井的艺术', content: '藻井是洞窟顶部的装饰，象征天宇。敦煌藻井以莲花为中心，四周布满飞天、祥云。' },
+ { title: '供养人的故事', content: '供养人是出资开窟造像的信徒，他们会在壁画中留下自己的形象，反映了当时的服饰和社会面貌。' },
+ { title: '经变画的魅力', content: '经变画是将佛经内容绘制成画，让不识字的百姓也能理解佛法，场面宏大、人物众多。' },
+ { title: '数字敦煌工程', content: '1990年代开始，敦煌研究院开展数字化保护，如今我们足不出户，就能在网上欣赏敦煌艺术。' },
+ { title: '反弹琵琶', content: '敦煌壁画中最著名的舞蹈形象，舞者反抱琵琶，姿态优美，已成为敦煌艺术的标志。' },
+ { title: '三兔共耳', content: '敦煌藻井中神秘的图案：三只兔子，三只耳朵，但每只兔子都有两只耳朵，象征轮回。' }
+ ];
+
+ // ========== 变量 ==========
+ let symmetryCount = 16, brushType = 'lotus', brushSize = 42, lineWidth = 2;
+ let randomColorEnabled = true, fillEnabled = false, jitterAmount = 0.8;
+ let centerX, centerY, currentPalette = PALETTES[0];
+ let selectedColor = currentPalette.colors[2];
+ let tipEnabled = true;
+ let strokeCount = 0, drawStartTime = Date.now(), lastTipTime = 0;
+ let uiElements = {};
+
+ // ========== p5.js 函数 ==========
+ function setup() {
+ createCanvas(windowWidth, windowHeight);
+ pixelDensity(2);
+ centerX = width / 2; centerY = height / 2;
+ buildUI(); buildPatternGallery();
+ updateKnowledgePanel();
+ applyBackground(); drawBackgroundPattern();
+ noFill(); strokeCap(ROUND); strokeJoin(ROUND);
+ }
+
+ function windowResized() {
+ resizeCanvas(windowWidth, windowHeight);
+ centerX = width / 2; centerY = height / 2;
+ applyBackground(); drawBackgroundPattern();
+ }
+
+ function draw() {
+ if (!mouseIsPressed) return;
+ if (isOverUI()) return;
+ 
+ const current = createVector(mouseX - centerX, mouseY - centerY);
+ const previous = createVector(pmouseX - centerX, pmouseY - centerY);
+ renderSymmetric(previous, current);
+ strokeCount++;
+ updateStats();
+ showRandomTipIfNeeded();
+ }
+
+ function mousePressed() {
+ if (isOverUI()) return;
+ // 印章模式
+ const v = createVector(mouseX - centerX, mouseY - centerY);
+ renderStamp(v);
+ strokeCount++;
+ updateStats();
+ }
+
+ // ========== 绘制函数 ==========
+ function renderSymmetric(vPrev, vCurr) {
+ const angleStep = TWO_PI / symmetryCount;
+ push(); translate(centerX, centerY);
+ 
+ const baseColor = randomColorEnabled ? random(currentPalette.colors) : selectedColor;
+ const strokeCol = color(baseColor);
+ const fillCol = color(baseColor);
+ strokeCol.setAlpha(255);
+ fillCol.setAlpha(fillEnabled ? 200 : 0);
+ 
+ stroke(strokeCol);
+ strokeWeight(lineWidth);
+ if (fillEnabled) fill(fillCol); else noFill();
+ 
+ for (let i = 0; i < symmetryCount; i++) {
+ push();
+ rotate(i * angleStep);
+ const jittered = withJitter(vCurr, jitterAmount);
+ const jitteredPrev = withJitter(vPrev, jitterAmount);
+ drawBrush(jitteredPrev, jittered);
+ // 卷草纹不进行左右对称
+ if (brushType !== 'scroll') {
+ scale(-1, 1);
+ drawBrush(createVector(-jitteredPrev.x, jitteredPrev.y), createVector(-jittered.x, jittered.y));
+ }
+ pop();
+ }
+ pop();
+ }
+
+ function renderStamp(v) {
+ const angleStep = TWO_PI / symmetryCount;
+ push(); translate(centerX, centerY);
+ 
+ const baseColor = randomColorEnabled ? random(currentPalette.colors) : selectedColor;
+ const strokeCol = color(baseColor);
+ const fillCol = color(baseColor);
+ strokeCol.setAlpha(255);
+ fillCol.setAlpha(fillEnabled ? 200 : 0);
+ 
+ stroke(strokeCol);
+ strokeWeight(lineWidth);
+ if (fillEnabled) fill(fillCol); else noFill();
+ 
+ for (let i = 0; i < symmetryCount; i++) {
+ push();
+ rotate(i * angleStep);
+ drawBrush(v, v, true);
+ // 卷草纹不进行左右对称
+ if (brushType !== 'scroll') {
+ scale(-1, 1);
+ drawBrush(createVector(-v.x, v.y), createVector(-v.x, v.y), true);
+ }
+ pop();
+ }
+ pop();
+ }
+
+ function drawBrush(vPrev, vCurr, single = false) {
+ const s = brushSize;
+ const a = atan2(vCurr.y, vCurr.x);
+ 
+ push();
+ translate(vCurr.x, vCurr.y);
+ 
+ // 只有部分纹样需要旋转（卷草纹保持固定方向，和UI一致）
+ if (['lotus', 'paisley', 'petal', 'flame'].includes(brushType)) {
+ rotate(a);
+ }
+ 
+ scale(s / 64);
+ 
+ switch(brushType) {
+ case 'lotus': drawLotus(); break;
+ case 'scroll': drawScroll(); break;
+ case 'ribbon': drawRibbon(); break;
+ case 'cloud': drawCloud(); break;
+ case 'diamond': drawDiamond(); break;
+ case 'honeysuckle': drawHoneysuckle(); break;
+ case 'paisley': drawPaisley(); break;
+ case 'meander': drawMeander(); break;
+ }
+ pop();
+ }
+
+ // ========== 纹样绘制函数 ==========
+ function drawLotus() {
+ // 绘制8瓣莲花
+ for (let i = 0; i < 8; i++) {
+ push();
+ rotate((TWO_PI / 8) * i);
+ beginShape();
+ vertex(0, 0);
+ bezierVertex(10, -15, 20, -20, 25, -10);
+ bezierVertex(20, 0, 10, 5, 0, 0);
+ endShape(CLOSE);
+ pop();
+ }
+ // 花心
+ fill(212, 175, 55, 100);
+ circle(0, 0, 15);
+ }
+
+ function drawScroll() {
+ strokeCap(ROUND);
+ 
+ // 从左侧开始向右上方卷曲的螺旋 - 和UI图标一致
+ beginShape();
+ vertex(-30, 12);
+ bezierVertex(-24, 18, -12, 22, 0, 18);
+ bezierVertex(12, 14, 18, 6, 18, -2);
+ bezierVertex(18, -10, 12, -14, 6, -12);
+ bezierVertex(0, -10, -2, -5, 2, -2);
+ bezierVertex(6, 0, 10, -2, 10, -6);
+ endShape();
+ }
+
+ function drawRibbon() {
+ // 和UI图标一致的两条波浪线
+ beginShape();
+ vertex(-10, -6);
+ bezierVertex(-6, -6, -4, -2, 0, -2);
+ bezierVertex(4, -2, 6, -6, 10, -6);
+ endShape();
+ 
+ beginShape();
+ vertex(-10, 6);
+ bezierVertex(-6, 6, -4, 2, 0, 2);
+ bezierVertex(4, 2, 6, 6, 10, 6);
+ endShape();
+ }
+
+ function drawCloud() {
+ // 如意云纹 - 闭合形状以支持填充
+ 
+ // 完整的祥云轮廓
+ beginShape();
+ // 左侧螺旋
+ vertex(-6, -14);
+ bezierVertex(-14, -16, -22, -8, -20, 2);
+ bezierVertex(-18, 8, -10, 8, -8, 4);
+ // 底部左侧
+ bezierVertex(-10, 10, -8, 12, -8, 4);
+ bezierVertex(-8, 8, -4, 8, 0, 8);
+ // 底部右侧
+ bezierVertex(4, 8, 8, 8, 8, 4);
+ bezierVertex(8, 4, 10, 10, 8, 4);
+ // 右侧螺旋
+ bezierVertex(10, 8, 18, 8, 20, 2);
+ bezierVertex(22, -8, 14, -16, 6, -14);
+ // 顶部
+ bezierVertex(3, -18, -3, -18, -6, -14);
+ endShape(CLOSE);
+ }
+
+ function drawDiamond() {
+ beginShape();
+ vertex(-28, 0);
+ vertex(0, -20);
+ vertex(28, 0);
+ vertex(0, 20);
+ endShape(CLOSE);
+ beginShape();
+ vertex(-20, 0);
+ vertex(0, -14);
+ vertex(20, 0);
+ vertex(0, 14);
+ endShape(CLOSE);
+ }
+
+ function drawHoneysuckle() {
+ 
+ // 左侧弯曲
+ beginShape();
+ vertex(0, 25);
+ bezierVertex(-8, 20, -15, 15, -22, 10);
+ bezierVertex(-28, 5, -28, 0, -25, -5);
+ bezierVertex(-22, -10, -15, -8, -8, -5);
+ bezierVertex(-4, 5, 0, 15, 0, 25);
+ endShape();
+ 
+ // 右侧弯曲
+ beginShape();
+ vertex(0, 25);
+ bezierVertex(8, 20, 15, 15, 22, 10);
+ bezierVertex(28, 5, 28, 0, 25, -5);
+ bezierVertex(22, -10, 15, -8, 8, -5);
+ bezierVertex(4, 5, 0, 15, 0, 25);
+ endShape();
+ 
+ // 中间叶片
+ beginShape();
+ vertex(0, 25);
+ bezierVertex(-2, 15, -2, 5, 0, -15);
+ bezierVertex(2, -20, 5, -20, 8, -15);
+ bezierVertex(8, -5, 5, 5, 2, 15);
+ bezierVertex(0, 25, 0, 25, 0, 25);
+ endShape(CLOSE);
+ }
+
+ function drawPaisley() {
+ beginShape();
+ vertex(-26, 0);
+ bezierVertex(-16, -22, 18, -14, 24, 0);
+ bezierVertex(18, 16, -10, 20, -26, 0);
+ endShape(CLOSE);
+ beginShape();
+ vertex(-12, 0);
+ bezierVertex(-6, -10, 8, -8, 12, 0);
+ bezierVertex(8, 8, -4, 10, -12, 0);
+ endShape(CLOSE);
+ arc(6, 0, 10, 10, -PI/2, PI/2);
+ }
+
+ function drawMeander() {
+ const s = 28;
+ const w = s / 3.5;
+ 
+ // 外层螺旋 - 从底部开始顺时针
+ beginShape();
+ vertex(-s + w, s);     // 左下（内收）
+ vertex(-s, s);         // 左下（外角）
+ vertex(-s, -s);        // 左上（外角）
+ vertex(s, -s);         // 右上（外角）
+ vertex(s, s - w);      // 右下（内收）
+ vertex(-s + w, s - w); // 左下内
+ vertex(-s + w, -s + w); // 左上内
+ vertex(s - w, -s + w);  // 右上内
+ vertex(s - w, s - w * 2); // 右下内（不到底）
+ vertex(w, s - w * 2);   // 底部中间
+ endShape();
+ 
+ // 内层螺旋
+ beginShape();
+ vertex(-s + w * 2, s - w * 2);
+ vertex(-s + w * 2, -s + w * 2);
+ vertex(s - w * 2, -s + w * 2);
+ vertex(s - w * 2, s - w * 3);
+ vertex(-s + w * 3, s - w * 3);
+ vertex(-s + w * 3, -s + w * 3);
+ vertex(s - w * 3, -s + w * 3);
+ vertex(s - w * 3, s - w * 4);
+ endShape();
+ }
+
+ // ========== 背景和工具 ==========
+ function applyBackground() { background('#000000'); }
+
+ function drawBackgroundPattern() {
+ push();
+ noStroke();
+ for (let i = 0; i < 3000; i++) {
+ fill(255, 255, 255, 1.5);
+ rect(random(width), random(height), 1, 1);
+ }
+ stroke(255, 255, 255, 5);
+ noFill();
+ for (let i = 0; i < 16; i++) {
+ const cx = random(width), cy = random(height), r = random(60, 180), t = random(TWO_PI);
+ beginShape();
+ for (let a = 0; a < TWO_PI; a += PI / 24) {
+ const rr = r + sin(a * 3 + t) * 8;
+ vertex(cx + rr * cos(a), cy + rr * sin(a));
+ }
+ endShape(CLOSE);
+ }
+ pop();
+ }
+
+ function withJitter(v, amt) {
+ if (amt <= 0) return v.copy();
+ return createVector(v.x + randomGaussian() * amt, v.y + randomGaussian() * amt);
+ }
+
+ // ========== 知识面板功能 ==========
+ function updateKnowledgePanel() {
+ // 更新配色知识
+ const paletteSection = document.getElementById('palette-knowledge');
+ const p = currentPalette;
+ paletteSection.innerHTML = `
+ <h5>${p.name}</h5>
+ <p><strong>时期：</strong>${p.era}</p>
+ <p><strong>特点：</strong>${p.description}</p>
+ <p><strong>象征：</strong>${p.symbolism}</p>
+ <p style="margin-top:8px;font-size:10px;color:#a09080;">${p.history}</p>
+ `;
+
+ // 更新纹样知识
+ const patternSection = document.getElementById('pattern-knowledge');
+ const pattern = DUNHUANG_PATTERNS.find(pt => pt.id === brushType);
+ if (pattern) {
+ const tagsHTML = pattern.tags.map(t => `<span class="tag">${t}</span>`).join('');
+ patternSection.innerHTML = `
+ <h5>${pattern.name}</h5>
+ <p><strong>寓意：</strong>${pattern.meaning}</p>
+ <p><strong>用途：</strong>${pattern.usage}</p>
+ <p><strong>时期：</strong>${pattern.period}</p>
+ <p><strong>演变：</strong>${pattern.evolution}</p>
+ <div>${tagsHTML}</div>
+ `;
+ }
+ }
+
+ function updateStats() {
+ document.getElementById('stroke-count').textContent = strokeCount;
+ const minutes = Math.floor((Date.now() - drawStartTime) / 60000);
+ document.getElementById('draw-time').textContent = minutes;
+ }
+
+ function showRandomTipIfNeeded() {
+ if (!tipEnabled) return;
+ const now = Date.now();
+ // 每30秒显示一次小知识
+ if (strokeCount > 0 && now - lastTipTime > 30000) {
+ showRandomTip();
+ lastTipTime = now;
+ }
+ }
+
+ function showRandomTip() {
+ const tip = random(RANDOM_TIPS);
+ const popup = document.getElementById('tip-popup');
+ document.getElementById('popup-tip-content').textContent = tip.title + '：' + tip.content;
+ popup.classList.add('show');
+ setTimeout(() => popup.classList.remove('show'), 5000);
+ document.getElementById('tip-content').textContent = tip.content;
+ }
+
+ function toggleKnowledgePanel() {
+ document.getElementById('knowledge-panel').classList.toggle('hidden');
+ }
+
+ // ========== UI 构建 ==========
+ function buildUI() {
+ // 配色选择
+ uiElements.scheme = document.getElementById('scheme');
+ PALETTES.forEach((p, i) => {
+ const option = document.createElement('option');
+ option.value = i;
+ option.textContent = p.name;
+ uiElements.scheme.appendChild(option);
+ });
+ uiElements.scheme.value = 0;
+ uiElements.scheme.addEventListener('change', () => {
+ currentPalette = PALETTES[parseInt(uiElements.scheme.value)];
+ selectedColor = currentPalette.colors[2];
+ applyBackground();
+ drawBackgroundPattern();
+ buildSwatches();
+ updateKnowledgePanel();
+ });
+
+ // 对称数
+ uiElements.symmetry = document.getElementById('symmetry');
+ uiElements.symmetry.value = symmetryCount;
+ uiElements.symmetry.addEventListener('input', () => {
+ symmetryCount = parseInt(uiElements.symmetry.value);
+ });
+
+ // 笔刷大小
+ uiElements.brushSize = document.getElementById('brushSize');
+ uiElements.brushSize.value = brushSize;
+ uiElements.brushSize.addEventListener('input', () => {
+ brushSize = parseInt(uiElements.brushSize.value);
+ });
+
+ // 线宽
+ uiElements.lineWidth = document.getElementById('lineWidth');
+ uiElements.lineWidth.value = lineWidth;
+ uiElements.lineWidth.addEventListener('input', () => {
+ lineWidth = parseInt(uiElements.lineWidth.value);
+ });
+
+ // 随机配色
+ uiElements.randomColor = document.getElementById('randomColor');
+ uiElements.randomColor.checked = randomColorEnabled;
+ uiElements.randomColor.addEventListener('change', () => {
+ randomColorEnabled = uiElements.randomColor.checked;
+ });
+
+ // 填充
+ uiElements.fillEnabled = document.getElementById('fillEnabled');
+ uiElements.fillEnabled.checked = fillEnabled;
+ uiElements.fillEnabled.addEventListener('change', () => {
+ fillEnabled = uiElements.fillEnabled.checked;
+ });
+
+ // 抖动
+ uiElements.jitter = document.getElementById('jitter');
+ uiElements.jitter.value = jitterAmount;
+ uiElements.jitter.addEventListener('input', () => {
+ jitterAmount = parseFloat(uiElements.jitter.value);
+ });
+
+ // 知识提示
+ uiElements.tipEnabled = document.getElementById('tipEnabled');
+ uiElements.tipEnabled.checked = tipEnabled;
+ uiElements.tipEnabled.addEventListener('change', () => {
+ tipEnabled = uiElements.tipEnabled.checked;
+ });
+
+ // 按钮
+ document.getElementById('clearBtn').addEventListener('click', () => {
+ applyBackground();
+ drawBackgroundPattern();
+ strokeCount = 0;
+ drawStartTime = Date.now();
+ updateStats();
+ });
+
+ document.getElementById('saveBtn').addEventListener('click', () => {
+ saveCanvas('藻笔生花_' + currentPalette.name.split('·')[0].trim(), 'png');
+ });
+
+ document.getElementById('shuffleBtn').addEventListener('click', () => {
+ // 随机配色
+ currentPalette = random(PALETTES);
+ uiElements.scheme.value = PALETTES.indexOf(currentPalette);
+ selectedColor = currentPalette.colors[2];
+ 
+ // 随机纹样
+ const randomPattern = random(DUNHUANG_PATTERNS);
+ brushType = randomPattern.id;
+ document.querySelectorAll('.pattern-item').forEach(el => el.classList.remove('selected'));
+ const selectedItem = document.querySelector(`[data-pattern="${brushType}"]`);
+ if (selectedItem) selectedItem.classList.add('selected');
+ 
+ // 随机对称数
+ symmetryCount = int(random([8, 12, 16, 20, 24]));
+ uiElements.symmetry.value = symmetryCount;
+ 
+ applyBackground();
+ drawBackgroundPattern();
+ buildSwatches();
+ updateKnowledgePanel();
+ });
+
+ buildSwatches();
+ }
+
+ function buildSwatches() {
+ const container = document.getElementById('swatches');
+ container.innerHTML = '';
+ currentPalette.colors.forEach((c, i) => {
+ const swatch = document.createElement('div');
+ swatch.className = 'swatch' + (i === 2 ? ' active' : '');
+ swatch.style.backgroundColor = c;
+ swatch.addEventListener('click', () => {
+ selectedColor = c;
+ randomColorEnabled = false;
+ uiElements.randomColor.checked = false;
+ document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+ swatch.classList.add('active');
+ });
+ container.appendChild(swatch);
+ });
+ }
+
+ function buildPatternGallery() {
+ const grid = document.getElementById('patternGrid');
+ grid.innerHTML = '';
+ 
+ DUNHUANG_PATTERNS.forEach((pattern, index) => {
+ const item = document.createElement('div');
+ item.className = 'pattern-item' + (pattern.id === brushType ? ' selected' : '');
+ item.setAttribute('data-pattern', pattern.id);
+ item.innerHTML = `${pattern.svg}<span>${pattern.name}</span>`;
+ 
+ item.addEventListener('click', () => {
+ // 更新选中状态
+ document.querySelectorAll('.pattern-item').forEach(el => el.classList.remove('selected'));
+ item.classList.add('selected');
+ 
+ // 更新笔刷
+ brushType = pattern.id;
+ 
+ // 更新知识面板
+ updateKnowledgePanel();
+ });
+ 
+ grid.appendChild(item);
+ });
+ }
+
+ function isOverUI() {
+ const panel = document.getElementById('ui-panel');
+ const knowledgePanel = document.getElementById('knowledge-panel');
+ const r1 = panel.getBoundingClientRect();
+ const r2 = knowledgePanel.getBoundingClientRect();
+ return (mouseX >= r1.left && mouseX <= r1.right && mouseY >= r1.top && mouseY <= r1.bottom) ||
+ (!knowledgePanel.classList.contains('hidden') && mouseX >= r2.left && mouseX <= r2.right && mouseY >= r2.top && mouseY <= r2.bottom);
+ }
+ </script>
+</body>
+</html>
